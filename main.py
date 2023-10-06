@@ -2,8 +2,10 @@ import requests
 from bs4 import BeautifulSoup
 import yaml
 from urllib.parse import urlsplit, urlunsplit
+from pprint import pprint
 
 REQUEST_TIMEOUT = 5
+FOLDER_LOCATION = '/tmp/twin_peaks'
 
 def get_seasons(url):
     # Step 1: Get a webpage HTML and extract the body
@@ -27,7 +29,8 @@ def get_seasons(url):
     return yaml_data
 
 def get_episodes(url):
-    response = requests.get(url, timeout=REQUEST_TIMEOUT)
+    response = requests.get(url[:-1], timeout=REQUEST_TIMEOUT)
+
     html = response.text
 
     # Step 2: Parse the HTML and extract <a> elements
@@ -50,7 +53,6 @@ if __name__ == "__main__":
     return_data = {}
 
     url = "http://ftp.timepassbd.live/timepassbd-data/ftp3/TV_SERIES/ENGLISH_TV_SERIES/T/Twin%20Peaks%20%28Complete%29"  # Replace with the URL of the webpage you want to scrape
-    url = "https://sr.ht/"  # Replace with the URL of the webpage you want to scrape
     split_url = urlsplit(url)
 
     scheme =  split_url.scheme  
@@ -59,19 +61,26 @@ if __name__ == "__main__":
 
     seasons = get_seasons(url)
 
-    for dir in filter(lambda x: 'sr' in x['href'], seasons):
+    for dir in filter(lambda x: 'timepassbd-data' in x['href'], seasons):
         # Step 1: Get a webpage HTML and extract the body
         url = f'{scheme}://{location}/{dir["href"]}'
         episode = get_episodes(url)
         return_data[dir.get('text').strip()] = episode
 
     with open("script1.sh", "w+") as file:
-        file.write(f"""
-#!/bin/
-                   """)
+        file.write(f"#!/bin/bash\n\n")
+        file.write(f"cd {FOLDER_LOCATION}\n")
+
+        for season in return_data.keys():
+            file.write(f"mkdir {season}\n")
+            file.write(f"cd {season}\n")
+
+            for episode in filter(lambda x: 'timepassbd-data' in x['href'], return_data[season]):
+                file.write(f"wget {episode['href']}\n")
+
+            file.write(f"cd ..\n")
 
 
-    # for season in return_data.keys():
 
 
 
